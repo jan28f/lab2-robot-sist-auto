@@ -1,63 +1,182 @@
-"""controlador-lab2 controller."""
-
 from controller import Robot
 from math import sin, cos
 
-# Inicializacion
-robot: Robot = Robot()
-timestep = int(robot.getBasicTimeStep())
-motor_rueda_izq = robot.getDevice("left wheel motor")
-motor_rueda_izq.setPosition(float("inf"))
-motor_rueda_izq.setVelocity(3)
-motor_rueda_der = robot.getDevice("right wheel motor")
-motor_rueda_der.setPosition(float("inf"))
-motor_rueda_der.setVelocity(3)
-dist_front_izq = robot.getDevice("ps7")
-dist_front_izq.enable(timestep)
-dist_front_der = robot.getDevice("ps0")
-dist_front_der.enable(timestep)
-dist_lat_izq = robot.getDevice("ps5")
-dist_lat_izq.enable(timestep)
-dist_lat_der = robot.getDevice("ps2")
-dist_lat_der.enable(timestep)
-encoder_rueda_izq = robot.getDevice("left wheel sensor")
-encoder_rueda_izq.enable(timestep)
-encoder_rueda_der = robot.getDevice("right wheel sensor")
-encoder_rueda_der.enable(timestep)
+robot = Robot()
+timeStep = int(robot.getBasicTimeStep())
 
-# En metros
-radio_ruedas: float = 0.0205
-distancia_ejes: float = 0.052
-velocidad_max: float = 6.28
+motorRuedaIzq = robot.getDevice("left wheel motor")
+motorRuedaIzq.setPosition(float("inf"))
+motorRuedaIzq.setVelocity(0.0)
 
-pos: dict = {
+motorRuedaDer = robot.getDevice("right wheel motor")
+motorRuedaDer.setPosition(float("inf"))
+motorRuedaDer.setVelocity(0.0)
+
+distFrontIzq = robot.getDevice("ps7")
+distFrontIzq.enable(timeStep)
+
+distFrontDer = robot.getDevice("ps0")
+distFrontDer.enable(timeStep)
+
+distLatIzq = robot.getDevice("ps5")
+distLatIzq.enable(timeStep)
+
+distLatDer = robot.getDevice("ps2")
+distLatDer.enable(timeStep)
+
+encoderRuedaIzq = robot.getDevice("left wheel sensor")
+encoderRuedaIzq.enable(timeStep)
+
+encoderRuedaDer = robot.getDevice("right wheel sensor")
+encoderRuedaDer.enable(timeStep)
+
+radioRuedas = 0.0205
+distanciaEjes = 0.052
+velocidadMax = 6.28
+
+tiempoMuestreoTs = timeStep / 1000.0
+frecuenciaMuestreoFs = 1.0 / tiempoMuestreoTs
+limiteMuestras30Segundos = int(30.0 * frecuenciaMuestreoFs)
+
+pos = {
     "theta": 0.0,
     "actual": 0.0,
     "x": 0.0,
     "y": 0.0,
-    "encoder_izq_previo": 0.0,
-    "encoder_der_previo": 0.0,
+    "encoderIzqPrevio": 0.0,
+    "encoderDerPrevio": 0.0,
 }
 
-def calcular_avance_ruedas(pos: dict, pos_actual_izq: float, pos_actual_der: float) -> None:
-    delta_izq: float = pos_actual_izq - pos["encoder_izq_previo"]
-    delta_der: float = pos_actual_der - pos["encoder_der_previo"]
-    avance_rueda_izq: float = delta_izq*radio_ruedas
-    avance_rueda_der: float = delta_der*radio_ruedas
-    avance: float = (avance_rueda_izq + avance_rueda_der) / 2
-    delta_theta: float = (avance_rueda_der - avance_rueda_izq) / distancia_ejes
+historialFrontIzq = []
+historialFrontDer = []
+largoFiltro = 5
+
+estimacionKalman = 0.0
+covarianzaError = 1.0
+ruidoProceso = 0.05
+ruidoMedicion = 0.5
+
+estadoGiro = False
+direccionGiro = 0
+conteoGiro = 0
+pasosMinimosGiro = 15
+
+sumaRaw = 0.0
+sumaFiltrado = 0.0
+sumaKalman = 0.0
+conteoMuestrasTotales = 0
+
+def calcularAvanceRuedas(pos, posActualIzq, posActualDer):
+    deltaIzq = posActualIzq - pos["encoderIzqPrevio"]
+    deltaDer = posActualDer - pos["encoderDerPrevio"]
+    avanceRuedaIzq = deltaIzq * radioRuedas
+    avanceRuedaDer = deltaDer * radioRuedas
+    avance = (avanceRuedaIzq + avanceRuedaDer) / 2
+    deltaTheta = (avanceRuedaDer - avanceRuedaIzq) / distanciaEjes
 
     pos["actual"] += avance
-    pos["theta"] += delta_theta
-    pos["x"] += avance*cos(pos["theta"])
-    pos["y"] += avance*sin(pos["theta"])
+    pos["theta"] += deltaTheta
+    pos["x"] += avance * cos(pos["theta"])
+    pos["y"] += avance * sin(pos["theta"])
+    return avance
 
-while robot.step(timestep) != -1:
-    print(pos)
-    pos_encoder_izq: float = encoder_rueda_izq.getValue()
-    pos_encoder_der: float = encoder_rueda_der.getValue()
+def aplicarFiltroMediana(historial, nuevaLectura):
+    historial.append(nuevaLectura)
+    if len(historial) > largoFiltro:
+        historial.pop(0)
     
-    calcular_avance_ruedas(pos, pos_encoder_izq, pos_encoder_der)
+    historialOrdenado = sorted(historial)
+    n = len(historialOrdenado)
+    mitad = n // 2
+    
+    if n % 2 == 1:
+        return historialOrdenado[mitad]
+    else:
+        return (historialOrdenado[mitad - 1] + historialOrdenado[mitad]) / 2
 
-    pos["encoder_izq_previo"] = pos_encoder_izq
-    pos["encoder_der_previo"] = pos_encoder_der
+def ejecutarFiltroKalman(avanceRobot, medicionSensor):
+    global estimacionKalman, covarianzaError
+    
+    factorEscalaProximidad = avanceRobot * 2000.0
+    prediccionDistancia = estimacionKalman + factorEscalaProximidad
+    
+    covarianzaPrediccion = covarianzaError + ruidoProceso
+    
+    gananciaKalman = covarianzaPrediccion / (covarianzaPrediccion + ruidoMedicion)
+    estimacionKalman = prediccionDistancia + gananciaKalman * (medicionSensor - prediccionDistancia)
+    covarianzaError = (1 - gananciaKalman) * covarianzaPrediccion
+    
+    if estimacionKalman < 0.0:
+        estimacionKalman = 0.0
+        
+    return estimacionKalman
+
+while robot.step(timeStep) != -1:
+    if conteoMuestrasTotales >= limiteMuestras30Segundos:
+        motorRuedaIzq.setVelocity(0.0)
+        motorRuedaDer.setVelocity(0.0)
+        break
+        
+    print(pos)
+    
+    posEncoderIzq = encoderRuedaIzq.getValue()
+    posEncoderDer = encoderRuedaDer.getValue()
+    
+    avanceRobot = calcularAvanceRuedas(pos, posEncoderIzq, posEncoderDer)
+    
+    pos["encoderIzqPrevio"] = posEncoderIzq
+    pos["encoderDerPrevio"] = posEncoderDer
+    
+    lecturaIzqRaw = distFrontIzq.getValue()
+    lecturaDerRaw = distFrontDer.getValue()
+    
+    lecturaIzqFiltrada = aplicarFiltroMediana(historialFrontIzq, lecturaIzqRaw)
+    lecturaDerFiltrada = aplicarFiltroMediana(historialFrontDer, lecturaDerRaw)
+    
+    medicionFrontalCombinada = (lecturaIzqFiltrada + lecturaDerFiltrada) / 2
+    
+    distanciaEstimada = ejecutarFiltroKalman(avanceRobot, medicionFrontalCombinada)
+    
+    sumaRaw += lecturaIzqRaw
+    sumaFiltrado += lecturaIzqFiltrada
+    sumaKalman += distanciaEstimada
+    conteoMuestrasTotales += 1
+    
+    umbralObstaculo = 95.0
+    umbralDespejado = 75.0
+    
+    if not estadoGiro:
+        if distanciaEstimada > umbralObstaculo:
+            estadoGiro = True
+            conteoGiro = 0
+            if distLatIzq.getValue() > distLatDer.getValue():
+                direccionGiro = 1
+            else:
+                direccionGiro = -1
+                
+    if estadoGiro:
+        conteoGiro += 1
+        if direccionGiro == 1:
+            motorRuedaIzq.setVelocity(velocidadMax * 0.4)
+            motorRuedaDer.setVelocity(-velocidadMax * 0.4)
+        else:
+            motorRuedaIzq.setVelocity(-velocidadMax * 0.4)
+            motorRuedaDer.setVelocity(velocidadMax * 0.4)
+            
+        if distanciaEstimada < umbralDespejado and conteoGiro >= pasosMinimosGiro:
+            estadoGiro = False
+    else:
+        motorRuedaIzq.setVelocity(velocidadMax * 0.5)
+        motorRuedaDer.setVelocity(velocidadMax * 0.5)
+
+promedioRaw = sumaRaw / conteoMuestrasTotales
+promedioFiltrado = sumaFiltrado / conteoMuestrasTotales
+promedioKalman = sumaKalman / conteoMuestrasTotales
+
+print("\n=== REPORTE FINAL DE SIMULACION (30 SEGUNDOS) ===")
+print(f"Tiempo Ts: {tiempoMuestreoTs} s | Frecuencia Fs: {frecuenciaMuestreoFs:.2f} Hz")
+print(f"Muestras Registradas: {conteoMuestrasTotales}")
+print(f"Posicion Final -> X: {pos['x']:.4f} | Y: {pos['y']:.4f} | Theta: {pos['theta']:.4f}")
+print(f"Distancia Total Avanzada: {pos['actual']:.4f} metros")
+print(f"Promedio Senales -> RAW: {promedioRaw:.2f} | MEDIANA: {promedioFiltrado:.2f} | KALMAN: {promedioKalman:.2f}")
+print("=================================================\n")
