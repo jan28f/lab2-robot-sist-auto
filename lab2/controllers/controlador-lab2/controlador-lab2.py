@@ -1,5 +1,6 @@
 from controller import Robot
-from math import sin, cos
+from math import sin, cos, degrees
+import csv
 
 robot = Robot()
 timeStep = int(robot.getBasicTimeStep())
@@ -36,10 +37,10 @@ velocidadMax = 6.28
 
 tiempoMuestreoTs = timeStep / 1000.0
 frecuenciaMuestreoFs = 1.0 / tiempoMuestreoTs
-limiteMuestras30Segundos = int(30.0 * frecuenciaMuestreoFs)
 
 pos = {
     "theta": 0.0,
+    "theta_angulo": 0.0,
     "actual": 0.0,
     "x": 0.0,
     "y": 0.0,
@@ -65,6 +66,11 @@ sumaRaw = 0.0
 sumaFiltrado = 0.0
 sumaKalman = 0.0
 conteoMuestrasTotales = 0
+tiempo_simulacion = 0.0
+
+archivo_info = open("datos-lab2.csv", mode="w", newline='')
+escritor = csv.writer(archivo_info)
+escritor.writerow(['tiempo_s', 'distancia_recorrida_m', 'posicion_x', 'posicion_y', 'angulo_theta', 'ps7_izq_raw', 'pS0_der_raw', 'ps7_izq_filtrado', 'ps0_der_filtrado', 'distancia_kalman'])
 
 def calcularAvanceRuedas(pos, posActualIzq, posActualDer):
     deltaIzq = posActualIzq - pos["encoderIzqPrevio"]
@@ -76,6 +82,7 @@ def calcularAvanceRuedas(pos, posActualIzq, posActualDer):
 
     pos["actual"] += avance
     pos["theta"] += deltaTheta
+    pos["theta_angulo"] = degrees(pos["theta"]) % 360.0
     pos["x"] += avance * cos(pos["theta"])
     pos["y"] += avance * sin(pos["theta"])
     return avance
@@ -112,13 +119,8 @@ def ejecutarFiltroKalman(avanceRobot, medicionSensor):
     return estimacionKalman
 
 while robot.step(timeStep) != -1:
-    if conteoMuestrasTotales >= limiteMuestras30Segundos:
-        motorRuedaIzq.setVelocity(0.0)
-        motorRuedaDer.setVelocity(0.0)
-        break
-        
+    tiempo_simulacion += tiempoMuestreoTs
     print(pos)
-    
     posEncoderIzq = encoderRuedaIzq.getValue()
     posEncoderDer = encoderRuedaDer.getValue()
     
@@ -168,6 +170,19 @@ while robot.step(timeStep) != -1:
     else:
         motorRuedaIzq.setVelocity(velocidadMax * 0.5)
         motorRuedaDer.setVelocity(velocidadMax * 0.5)
+    
+    escritor.writerow([
+        tiempo_simulacion,
+        pos["actual"],
+        pos["x"],
+        pos["y"],
+        pos["theta"],
+        lecturaIzqRaw,
+        lecturaDerRaw,
+        lecturaIzqFiltrada,
+        lecturaDerFiltrada,
+        distanciaEstimada
+    ])
 
 promedioRaw = sumaRaw / conteoMuestrasTotales
 promedioFiltrado = sumaFiltrado / conteoMuestrasTotales

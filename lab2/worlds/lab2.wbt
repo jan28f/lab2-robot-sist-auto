@@ -3,13 +3,23 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/balls/protos/FifaSoccerBall.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/apartment_structure/protos/WallPlug.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/computers/protos/Monitor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/toys/protos/RubberDuck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/drinks/protos/Can.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/chairs/protos/OfficeChair.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/drinks/protos/WaterBottle.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/rocks/protos/Rock.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/plants/protos/FlowerPot.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/kitchen/breakfast/protos/JamJar.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.5773502691896257 0.5773502691896257 0.5773502691896257 2.0944
-  position -1.622600372491378e-05 -1.622604960604879e-05 4.261625379020631
+  orientation -0.46609741761899454 0.04460081482404928 0.8836084905691749 2.97289516889349
+  position 2.530526772244958 -0.7291054049247239 3.5954643643027326
 }
 TexturedBackground {
 }
@@ -17,6 +27,44 @@ TexturedBackgroundLight {
 }
 RectangleArena {
   floorSize 2 2
+}
+FifaSoccerBall {
+  translation 0.23940287918374822 -0.3167604751109401 0.11182507199999998
+  rotation 0.7955519924827714 -0.044130415391222894 -0.6042760409730726 2.1596740707585846
+}
+RubberDuck {
+  translation 0.4917997997165763 0.41927105385007285 0.02043801821435004
+  rotation -1.6658649019209415e-15 2.8243676870142993e-15 -1 0.03560867926943895
+}
+WallPlug {
+  translation -0.603827 0.283582 0.04
+}
+Monitor {
+  translation 0.685814 -0.265168 6.68354e-14
+}
+Can {
+  translation -0.057536974433820436 0.5331245398962289 0.06096266
+  rotation 4.730742546733638e-15 -5.295866207318934e-15 1 0.0029929529892848738
+}
+OfficeChair {
+  hidden position_0_0 -0.0003852457378448193
+  hidden rotation_1 0 0 -1 0.00038524573801580194
+  translation -0.4938609193700991 -0.3047750006682727 -0.001415335326536149
+  rotation -0.007633478190756255 -0.999970864580164 1.2290194336938353e-06 0.0014054625538757002
+}
+WaterBottle {
+  translation -0.426753 0.698963 -0.0023923999409216357
+  rotation 0.16934062092558402 0.14763691607007212 -0.9744368091969106 2.509062564077152e-16
+}
+Rock {
+  translation 0.332695 -0.819915 0
+}
+FlowerPot {
+  translation 0.412093 0.795687 3.10862e-15
+}
+JamJar {
+  translation 0.8057640451240211 0.21693704577230552 -0.000696199999999994
+  rotation -1.4249325191762545e-14 3.1202979915357972e-15 1 0.010691746739593796
 }
 E-puck {
   controller "controlador-lab2"
