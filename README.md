@@ -37,3 +37,14 @@ Para estimar el avance lineal del robot a partir de los encoders, se utiliza la 
 
 ## 7. Filtro Simple Aplicado
 Se implementó un **Filtro de Mediana** con un tamaño de ventana de 5 muestras (largoFiltro = 5). Este filtro almacena el historial reciente de las lecturas, las ordena y selecciona el valor central. Esto permite eliminar de manera efectiva los valores atípicos (outliers) y el ruido impulsivo de las lecturas crudas antes de enviarlas al filtro de Kalman.
+
+## 8. Implementación del Filtro de Kalman
+Se implementó un filtro de Kalman escalar para estimar una variable de **proximidad frontal** (donde valores mayores indican que el obstáculo está más cerca). El modelo opera con un ruido de proceso Q = 0.05 y un ruido de medición R = 0.5:
+* **Etapa de Predicción (Movimiento):** Se predice la nueva proximidad sumando a la estimación anterior un factor derivado del avance lineal del robot (factorEscalaProximidad = avanceRobot * 2000.0). A medida que el robot avanza físicamente, se espera que la proximidad al obstáculo aumente.
+* **Etapa de Corrección (Medición):** Se calcula la ganancia de Kalman y se corrige la predicción comparándola con la medición real (el promedio de las lecturas filtradas de ps7 y ps0). Si la estimación cae por debajo de 0, se satura en 0.0.
+
+## 9. Lógica de Navegación Reactiva
+La toma de decisiones se basa en la salida estabilizada del filtro de Kalman (distanciaEstimada):
+1. **Avance:** Mientras la estimación sea menor al umbralObstaculo (95.0), el robot avanza en línea recta.
+2. **Evasión (Giro):** Si la estimación supera 95.0, el robot entra en estado de giro. En este instante, se comparan los sensores laterales (ps5 vs ps2). Si el lado izquierdo está más ocluido, el robot gira a la derecha, y viceversa.
+3. **Restablecimiento:** Para evitar oscilaciones rápidas, el giro solo finaliza cuando la proximidad cae por debajo del umbralDespejado (75.0) y se ha mantenido el giro por al menos 15 pasos de simulación (pasosMinimosGiro).
