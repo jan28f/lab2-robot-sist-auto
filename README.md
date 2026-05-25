@@ -48,3 +48,15 @@ La toma de decisiones se basa en la salida estabilizada del filtro de Kalman (di
 1. **Avance:** Mientras la estimación sea menor al umbralObstaculo (95.0), el robot avanza en línea recta.
 2. **Evasión (Giro):** Si la estimación supera 95.0, el robot entra en estado de giro. En este instante, se comparan los sensores laterales (ps5 vs ps2). Si el lado izquierdo está más ocluido, el robot gira a la derecha, y viceversa.
 3. **Restablecimiento:** Para evitar oscilaciones rápidas, el giro solo finaliza cuando la proximidad cae por debajo del umbralDespejado (75.0) y se ha mantenido el giro por al menos 15 pasos de simulación (pasosMinimosGiro).
+
+## 10. Gráficos de Señales Crudas, Filtradas y Estimadas
+
+![Gráficos de Sensores](Figure_1.png)
+
+## 11. Resultados Obtenidos en los Escenarios de Prueba
+El robot interactuó con objetos de diversas formas (pelota, pato de goma, botellas). La detección funcionó correctamente, y la lógica de giro demostró ser robusta gracias a la histéresis aplicada (umbrales de 95.0 y 75.0).
+
+## 12. Análisis Final y Conclusiones
+* La conversión de los datos del encoder a distancia lineal fue fundamental para inyectar información de movimiento en la etapa de predicción del filtro de Kalman.
+* El uso en cascada de un filtro de mediana seguido de un filtro de Kalman demostró ser altamente efectivo: la mediana elimina el ruido impulsivo y Kalman suaviza la señal fusionando el avance cinemático.
+* El sistema de evasión con umbrales asimétricos (95.0 para detectar, 75.0 para liberar) eliminó completamente la oscilación indecisa del robot al enfrentarse a una pared.
